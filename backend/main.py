@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from fastapi.responses import FileResponse
 import numpy as np
 from sklearn.linear_model import LogisticRegression
+from typing import Union # Импортталған
 
 # ==================== Инициализация ======================
 app = FastAPI(title="AI Math Quest — Қазақша нұсқа")
@@ -47,7 +48,6 @@ else:
     app.mount("/sounds", StaticFiles(directory=sounds_path), name="sounds")
 
 # ==================== Ойын деректері ======================
-# ... (Ойын деректері мен generate_question функциясының барлық бөлігі өзгеріссіз) ...
 players = {}
 MAX_LEVEL = 10
 training_data = []
@@ -154,7 +154,6 @@ def generate_question(level: int, asked: list):
 
 
 # ==================== AI үлгісі ======================
-# ... (AI үлгісінің барлық бөлігі өзгеріссіз) ...
 ai_model = LogisticRegression()
 
 def train_ai_model():
@@ -187,12 +186,13 @@ def adaptive_difficulty(prob, current_level):
 
 
 # ==================== API ======================
-# 🛑 МАҢЫЗДЫ ӨЗГЕРІС: API маршруттарын мұнда, app.mount("/") алдына жылжыттық!
 
+# 🛑 ТҮЗЕТУ: user_answer типін str-ға өзгертеміз,
+# себебі 422 қатесі көбінесе Pydantic-тің түрлендіруінде туындайды.
 class AnswerRequest(BaseModel):
     player: str
     question: str
-    user_answer: float
+    user_answer: str
 
 
 @app.get("/register/{player}")
@@ -239,10 +239,13 @@ def answer(req: AnswerRequest):
     if correct is None:
         raise HTTPException(status_code=400, detail="Сначала получите вопрос.")
 
+    # 🛑 ТҮЗЕТУ: user_answer-ді str-ден float-қа қолмен түрлендіреміз
     try:
         user_answer = float(req.user_answer)
     except ValueError:
-        return {"is_correct": False, "message": "Жауап сан болуы керек!"}
+        # Егер түрлендіру сәтсіз болса, 200 қатесін және қате туралы хабарламаны қайтарамыз
+        # (Бұл 422 қатесін болдырмайды)
+        return {"is_correct": False, "message": "Жауап сан болуы керек!", "new_level": pdata["level"], "score": pdata["score"]}
 
     # Исправляем проблему с None в 6 уровне
     if correct is None:
@@ -252,10 +255,8 @@ def answer(req: AnswerRequest):
 
     if is_correct:
         pdata["score"] += 10 * pdata["level"]
-        # pdata["level"] = min(pdata["level"] + 1, MAX_LEVEL) # AI теперь управляет этим
     else:
         pdata["score"] = max(pdata["score"] - 5, 0)
-        # pdata["level"] = max(pdata["level"] - 1, 1) # AI теперь управляет этим
 
     # === AI оқыту ===
     training_data.append([pdata["score"], pdata["level"]])
