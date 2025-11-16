@@ -20,7 +20,7 @@ from sqlalchemy.ext.declarative import declarative_base
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./math_quest.db")
 
 # SQLAlchemy Engine және Session
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -180,17 +180,21 @@ ai_model = LogisticRegression()
 training_data: List[List[float]] = []
 labels: List[int] = []
 
+# --- STREAK жүйесі (әр ойыншы үшін) ---
+correct_streaks = {}
+
 def train_ai_model():
-    # ... (бұрынғыдай қалады) ...
     global ai_model
     if len(training_data) > 5:
         X = np.array(training_data)
         y = np.array(labels)
-        ai_model.fit(X, y)
-        print("🧠 AI үлгі үйретілді (обучена)")
+        try:
+            ai_model.fit(X, y)
+            print("🧠 AI үлгі үйретілді (обучена)")
+        except Exception as e:
+            print("AI training failed:", e)
 
 def predict_next_level(score, level):
-    # ... (бұрынғыдай қалады) ...
     if len(training_data) < 5:
         return 0.5
     X_pred = np.array([[score, level]])
@@ -200,16 +204,29 @@ def predict_next_level(score, level):
         prob = 0.5
     return float(prob)
 
-def adaptive_difficulty(prob, current_level):
-    # ... (бұрынғыдай қалады) ...
+def adaptive_difficulty(prob, current_level, streak=0):
+    """
+    Жаңартылған адаптация: AI болжамы + streak механикасы.
+    Егер streak >= 4 -> міндетті түрде деңгей өседі.
+    AI prob > 0.75 -> деңгей өсіру мүмкін.
+    AI prob < 0.40 -> деңгей төмендету.
+    Әйтпесе деңгей сол қалпында қалады.
+    """
     MAX_LEVEL = 10
+
+    # 4 рет қатар дұрыс жауап болса — міндетті түрде өсіру
+    if streak >= 4:
+        return min(current_level + 1, MAX_LEVEL)
+
+    # AI бойынша өсіру
     if prob > 0.75:
-        new_level = current_level + 1
-    elif prob < 0.4:
-        new_level = max(1, current_level - 1)
-    else:
-        new_level = current_level
-    return min(new_level, MAX_LEVEL)
+        return min(current_level + 1, MAX_LEVEL)
+
+    # AI бойынша төмендету
+    if prob < 0.40:
+        return max(1, current_level - 1)
+
+    return current_level
 
 
 # ==================== API (DB CRUD) ======================
@@ -231,6 +248,10 @@ def register_player_route(player: str, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(db_player)
         print(f"🧍‍♂️ Ойыншы тіркелді (DB): {player}")
+
+    # Инициализация — in-memory streak
+    if player not in correct_streaks:
+        correct_streaks[player] = 0
     
     return {"player": db_player.player, 
             "current_score": db_player.score, 
@@ -248,7 +269,8 @@ def get_question(player: str, db: Session = Depends(get_db)):
     
     # AI Адаптация
     prob = predict_next_level(db_player.score, db_player.level)
-    new_level = adaptive_difficulty(prob, db_player.level)
+    streak = correct_streaks.get(player, 0)
+    new_level = adaptive_difficulty(prob, db_player.level, streak)
     
     # Сұрақ генерациясы
     q, ans, new_asked_str = generate_question(new_level, db_player.asked_questions)
@@ -262,7 +284,8 @@ def get_question(player: str, db: Session = Depends(get_db)):
     
     return {"math_question": q, 
             "current_level": db_player.level, 
-            "ai_prediction": round(prob, 2)}
+            "ai_prediction": round(prob, 2),
+            "streak": streak}
 
 
 # 3. Жауап беру (Answer)
@@ -290,6 +313,15 @@ def answer(req: AnswerRequest, db: Session = Depends(get_db)):
     else:
         db_player.score = max(db_player.score - 5, 0)
     
+    # --- STREAK трекингі (in-memory) ---
+    if req.player not in correct_streaks:
+        correct_streaks[req.player] = 0
+
+    if is_correct:
+        correct_streaks[req.player] += 1
+    else:
+        correct_streaks[req.player] = 0
+
     # current_answer мәнін тазалау
     db_player.current_answer = None
 
@@ -298,16 +330,16 @@ def answer(req: AnswerRequest, db: Session = Depends(get_db)):
     labels.append(1 if is_correct else 0)
     train_ai_model()
 
-    # AI келесі деңгей туралы шешім қабылдайды
+    # AI келесі деңгей туралы шешім қабылдайды (streak қосылып)
     prob = predict_next_level(db_player.score, db_player.level)
-    db_player.level = adaptive_difficulty(prob, db_player.level)
+    db_player.level = adaptive_difficulty(prob, db_player.level, correct_streaks[req.player])
 
     # Дерекқорға өзгерістерді сақтау
     db.commit()
     db.refresh(db_player)
 
     progress = int((db_player.level / 10) * 100)
-    print(f"[{req.player}] {'✅' if is_correct else '❌'} {req.question} — жаңа деңгей {db_player.level} | Болжау: {prob:.2f}")
+    print(f"[{req.player}] {'✅' if is_correct else '❌'} {req.question} — жаңа деңгей {db_player.level} | streak={correct_streaks[req.player]} | Болжау: {prob:.2f}")
     
     return {
         "is_correct": is_correct,
@@ -315,7 +347,8 @@ def answer(req: AnswerRequest, db: Session = Depends(get_db)):
         "new_level": db_player.level,
         "score": db_player.score,
         "progress": progress,
-        "ai_prediction": round(prob, 2)
+        "ai_prediction": round(prob, 2),
+        "streak": correct_streaks[req.player]
     }
 
 # 4. Көшбасшылар тақтасы (Leaderboard)
@@ -327,7 +360,9 @@ def leaderboard(db: Session = Depends(get_db)):
 # --------------------------------------------------------
 # Static Files (ең соңында)
 # --------------------------------------------------------
-app.mount("/", StaticFiles(directory=frontend_path, html=True), name="static")
+# safety: only mount frontend if folder exists
+if os.path.exists(frontend_path):
+    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="static")
 
 # ==================== Іске қосу ======================
 if __name__ == "__main__":
