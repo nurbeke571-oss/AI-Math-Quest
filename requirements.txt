@@ -1,5 +1,7 @@
 fastapi
 uvicorn
-scikit-learn
 numpy
-gunicorn
+scikit-learn
+pydantic
+sqlalchemy
+psycopg2-binary  # PostgreSQL үшін
