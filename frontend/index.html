@@ -53,7 +53,6 @@
 </div>
 
 <script>
-// ТҮЗЕТУ: API мекенжайын Render-де жұмыс істеу үшін қатысты жолға (relative path) өзгерттік
 const API=""; 
 let player=null,currentQuestion=null,hintUsed=false,muted=false;
 let timeLeft=15,timerInterval=null;
@@ -92,19 +91,26 @@ const el={
 // 🚀 Ойынды бастау
 el.startBtn.onclick=async()=>{
     player=el.playerName.value.trim()||"Ойыншы";
-    const res=await fetch(`${API}/register/${encodeURIComponent(player)}`); 
-    const data=await res.json();
-    el.playerLabel.innerText=player;
-    
-    // ✅ ТҮЗЕТУ: (Undefined қатесін болдырмау - тек сәйкестікті тексеру)
-    el.scoreLabel.innerText=data.current_score||0; 
-    el.levelLabel.innerText=data.current_level||1; 
+    try {
+        const res=await fetch(`${API}/register/${encodeURIComponent(player)}`); 
+        // 🛑 ТҮЗЕТУ: Сәтсіз жауапты тексеру
+        if (!res.ok) throw new Error(`Тіркеу қатесі: ${res.status}`);
+        
+        const data=await res.json();
+        
+        el.playerLabel.innerText=player;
+        el.scoreLabel.innerText=data.current_score||0; 
+        el.levelLabel.innerText=data.current_level||1; 
 
-    el.login.style.display="none";
-    el.game.style.display="block";
-    if(!muted)bgMusic.play().catch(()=>{});
-    getQuestion();
-    updateLeaderboard();
+        el.login.style.display="none";
+        el.game.style.display="block";
+        if(!muted)bgMusic.play().catch(()=>{});
+        getQuestion();
+        updateLeaderboard();
+    } catch (e) {
+        console.error("Тіркелу немесе сұрақ алу сәтсіз аяқталды:", e);
+        alert("Сервермен байланыс қатесі. Консольді тексеріңіз.");
+    }
 };
 
 // 🔢 Сұрақ алу
@@ -125,18 +131,32 @@ async function getQuestion(){
             el.answerInput.disabled = true;
             el.submitBtn.disabled = true;
             if(!muted)wrongSound.play();
-            sendAnswer("timeout",true); // Уақыт біткенін білдіретін жол жібереміз
+            sendAnswer("timeout",true);
         }
     },1000);
 
-    const res=await fetch(`${API}/question/${encodeURIComponent(player)}`);
-    const data=await res.json();
-    
-    currentQuestion=data.math_question;
-    el.question.innerText=`(${data.current_level}-деңгей) ${currentQuestion}`;
+    try {
+        const res=await fetch(`${API}/question/${encodeURIComponent(player)}`);
+        if (!res.ok) throw new Error(`Сұрақ қатесі: ${res.status}`);
+        
+        const data=await res.json();
+        
+        // 🛑 ТҮЗЕТУ: data.math_question мен data.current_level-дің бар екенін тексеру
+        if (!data.math_question || !data.current_level) {
+            throw new Error("Бэкэндіден деректер толық келмеді.");
+        }
 
-    el.feedback.innerText="";
-    el.answerInput.value="";
+        currentQuestion=data.math_question;
+        el.question.innerText=`(${data.current_level}-деңгей) ${currentQuestion}`;
+
+        el.feedback.innerText="";
+        el.answerInput.value="";
+    } catch (e) {
+        console.error("Сұрақ алу сәтсіз аяқталды:", e);
+        el.question.innerText = "❌ Сұрақ жүктеу қатесі";
+        el.levelLabel.innerText = "N/A";
+        el.scoreLabel.innerText = "N/A";
+    }
 }
 
 // ⏱️ Таймер жаңарту
@@ -154,12 +174,9 @@ async function sendAnswer(val,isTimeout){
     
     let userAnswerString;
 
-    // 🛑 БАСТЫ ТҮЗЕТУ: user_answer-ді тек string ретінде жіберуді қамтамасыз ету
     if (isTimeout) {
-        // Уақыт біткенде, біз бэкэндге танылмайтын, сан емес жолды жібереміз
         userAnswerString = "NaN_Timeout"; 
     } else {
-        // Дұрыс жауапты (санды) жолға түрлендіріп жібереміз
         const parsedVal = parseFloat(val);
         if (isNaN(parsedVal)) {
             alert("Жауапты енгізіңіз!");
@@ -172,40 +189,47 @@ async function sendAnswer(val,isTimeout){
     const payload={
         player: player,
         question: currentQuestion,
-        user_answer: userAnswerString // Бұл жерде енді string (жол) бар
+        user_answer: userAnswerString
     };
     
-    const res=await fetch(`${API}/answer`,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(payload)
-    });
-    
-    const data=await res.json();
-    
-    // Бэкэндтегі ValueError-ды (NaN немесе "NaN_Timeout") өңдеу
-    if (data.message && data.message.includes("сан болуы керек")) {
-        el.feedback.style.color="red";
-        el.feedback.innerText= isTimeout ? "⏰ Уақыт бітті! Ұпай шегерілді." : data.message;
-        if(!muted)wrongSound.play();
-    } else if(data.is_correct){
-        el.feedback.style.color="green";
-        el.feedback.innerText="✅ Дұрыс! Жарайсың!";
-        if(!muted)correctSound.play();
-    }else{
-        el.feedback.style.color="red";
-        el.feedback.innerText=`❌ Қате! Дұрыс жауап: ${data.correct_answer}`;
+    try {
+        const res=await fetch(`${API}/answer`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(payload)
+        });
+        
+        const data=await res.json();
+        
+        // Бұл жерде data.score, data.new_level болуы міндетті
+        if (data.message && data.message.includes("сан болуы керек")) {
+            el.feedback.style.color="red";
+            el.feedback.innerText= isTimeout ? "⏰ Уақыт бітті! Ұпай шегерілді." : data.message;
+            if(!muted)wrongSound.play();
+        } else if(data.is_correct){
+            el.feedback.style.color="green";
+            el.feedback.innerText="✅ Дұрыс! Жарайсың!";
+            if(!muted)correctSound.play();
+        }else{
+            el.feedback.style.color="red";
+            el.feedback.innerText=`❌ Қате! Дұрыс жауап: ${data.correct_answer}`;
+            if(!muted)wrongSound.play();
+        }
+
+        // ✅ Деректерді тағайындау
+        el.scoreLabel.innerText=data.score || 0;
+        el.levelLabel.innerText=data.new_level || 1;
+        el.progress.style.width=data.progress || 0+"%";
+        el.progress.innerText=data.progress || 0+"%";
+        
+    } catch (e) {
+        console.error("Жауап жіберу қатесі:", e);
+        el.feedback.innerText = "❌ Сервермен байланыс қатесі!";
         if(!muted)wrongSound.play();
     }
-
-    // ✅ Бұл кілттер main.py файлымен сәйкес келеді
-    el.scoreLabel.innerText=data.score;
-    el.levelLabel.innerText=data.new_level;
-    el.progress.style.width=data.progress+"%";
-    el.progress.innerText=data.progress+"%";
     
-    updateLeaderboard(); // Ұпай өзгерген соң көшбасшыларды жаңарту
-    setTimeout(getQuestion, isTimeout ? 2000 : 1500); // Тайм-аутта көбірек күту
+    updateLeaderboard(); 
+    setTimeout(getQuestion, isTimeout ? 2000 : 1500); 
 }
 
 // 💡 Кеңес
@@ -221,14 +245,19 @@ el.hintBtn.onclick=()=>{
 
 // 🏆 Көшбасшылар
 async function updateLeaderboard(){
-    const res=await fetch(`${API}/leaderboard`);
-    const data=await res.json();
-    el.leaders.innerHTML='';
-    data.slice(0,10).forEach(p=>{
-        const li=document.createElement('li');
-        li.innerText=`${p.player}: ${p.score}`;
-        el.leaders.appendChild(li);
-    });
+    try {
+        const res=await fetch(`${API}/leaderboard`);
+        if (!res.ok) throw new Error('Көшбасшылар тақтасын жүктеу қатесі');
+        const data=await res.json();
+        el.leaders.innerHTML='';
+        data.slice(0,10).forEach(p=>{
+            const li=document.createElement('li');
+            li.innerText=`${p.player}: ${p.score}`;
+            el.leaders.appendChild(li);
+        });
+    } catch (e) {
+        console.error("Көшбасшылар тақтасын жаңарту қатесі:", e);
+    }
 }
 setInterval(updateLeaderboard,5000);
 </script>
