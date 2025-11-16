@@ -2,264 +2,455 @@
 <html lang="kk">
 <head>
     <meta charset="utf-8" />
-    <title>🤖 AI Math Quest — Қазақша нұсқа + Таймер</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌟 AI Math Quest — Қазақша + Динамикалық UI</title>
     <style>
-        body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#e2ebf0,#cfd9df);
-            color:#222;text-align:center;padding:20px;transition:background .3s ease}
-        .card{background:#fff;padding:18px;border-radius:16px;
-            box-shadow:0 6px 18px rgba(0,0,0,.1);width:420px;margin:20px auto;
-            transition:transform .3s ease,box-shadow .3s ease}
-        .card:hover{transform:scale(1.02);box-shadow:0 8px 24px rgba(0,0,0,.15)}
-        input{padding:10px;border-radius:8px;border:1px solid #ccc;width:80%;margin:10px 0;
-            text-align:center;font-size:16px}
-        button{padding:10px 14px;border-radius:8px;margin:6px;cursor:pointer;border:none;
-            font-size:15px;background:#4CAF50;color:#fff;transition:background .2s}
-        button:hover{background:#3e8e41}
-        #progress{height:20px;background:#4caf50;border-radius:12px;width:0;color:#fff;
-            line-height:20px;transition:width .3s}
-        #feedback{font-size:18px;font-weight:bold;margin-top:10px;min-height:30px;
-            transition:color .3s,transform .3s}
-        .mute-btn{position:fixed;top:10px;right:10px;background:#2196F3;border-radius:50%;
-            width:40px;height:40px;color:white;font-size:18px}
-        #timer{font-weight:bold;font-size:18px;color:#ff5722;margin:10px 0;}
+        /* 1. ЖАЛПЫ ЖӘНЕ ФОН */
+        :root{
+            --primary-color: #007bff; /* Көк */
+            --success-color: #28a745; /* Жасыл */
+            --danger-color: #dc3545; /* Қызыл */
+            --warning-color: #ffc107; /* Сары */
+            --bg-light: #f8f9fa;
+            --bg-dark: #343a40;
+            --text-dark: #212529;
+            --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        body{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e0f7fa, #b2ebf2);
+            color: var(--text-dark);
+            text-align: center;
+            padding: 20px;
+            transition: background-color .5s ease, background .5s ease;
+        }
+        
+        /* 2. КАРТОЧКА (CARD) СТИЛЬДЕРІ */
+        .card{
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            width: 90%;
+            max-width: 480px;
+            margin: 20px auto;
+            transition: transform .4s ease, box-shadow .4s ease;
+            animation: fadeIn 1s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 3. ОЙЫН ИНТЕРФЕЙСІНІҢ СТИЛІ */
+        h1{ color: var(--primary-color); font-weight: 700; margin-bottom: 25px; }
+        
+        input[type="text"], input[type="number"]{
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid #ced4da;
+            width: 85%;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 17px;
+            transition: border-color .3s;
+        }
+        input:focus{ border-color: var(--primary-color); outline: none; }
+        
+        button{
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin: 8px;
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            transition: background-color .3s, transform .1s;
+        }
+        button:hover{ transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        #startBtn{ background: var(--primary-color); }
+        #startBtn:hover{ background: #0056b3; }
+        #submitBtn{ background: var(--success-color); }
+        #submitBtn:hover{ background: #1e7e34; }
+        #hintBtn{ background: var(--warning-color); color: var(--text-dark); }
+        #hintBtn:hover{ background: #d39e00; }
+        
+        /* 4. ПРОГРЕСС ЖӘНЕ ТАЙМЕР */
+        .stats-grid{
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 10px;
+            background: var(--bg-light);
+        }
+        .stat-item{
+            font-size: 14px;
+            font-weight: 500;
+            padding: 5px;
+            border-radius: 5px;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .stat-item b{ display: block; font-size: 18px; font-weight: 700; color: var(--primary-color); }
+        
+        #progressContainer{
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        #progress{
+            height: 100%;
+            background: linear-gradient(90deg, #17a2b8, var(--success-color));
+            width: 0%;
+            color: #fff;
+            line-height: 30px;
+            transition: width 0.6s ease-out; /* 📈 Анимация */
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        #timer{
+            font-weight: 700;
+            font-size: 20px;
+            color: var(--danger-color);
+            margin: 15px 0;
+            transition: transform .1s;
+        }
+        
+        /* 5. КЕРІ БАЙЛАНЫС ЖӘНЕ АНИМАЦИЯЛАР */
+        #feedback{
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 20px;
+            min-height: 40px;
+            transition: color .4s, transform .4s, opacity .4s;
+            animation: feedbackPop .3s ease-out;
+        }
+        @keyframes feedbackPop {
+            0% { transform: scale(0.8); opacity: 0; }
+            70% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+        .mute-btn{
+            position: fixed; top: 20px; right: 20px; background: var(--primary-color);
+            border-radius: 50%; width: 50px; height: 50px; color: white; font-size: 20px;
+            line-height: 50px; text-align: center; border: none; cursor: pointer; z-index: 10;
+        }
+        
+        /* 6. КӨШБАСШЫЛАР ТАҚТАСЫ (LEADERBOARD) */
+        #leaders{
+            list-style-type: none;
+            padding: 0;
+            text-align: left;
+        }
+        #leaders li{
+            background: #e9ecef;
+            margin-bottom: 8px;
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            font-weight: 500;
+            border-left: 5px solid var(--primary-color);
+            transition: background .3s;
+        }
+        #leaders li:nth-child(1){ border-left-color: gold; font-weight: 700; background: #fff3cd; }
+        #leaders li:nth-child(2){ border-left-color: silver; background: #e2e6ea; }
+        #leaders li:nth-child(3){ border-left-color: #cd7f32; background: #f0e68c; }
+
+        /* 7. АДАПТИВТІК (MEDIA QUERIES) */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .card { width: 95%; padding: 20px; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .mute-btn { width: 40px; height: 40px; font-size: 16px; line-height: 40px; }
+        }
     </style>
 </head>
-<body>
-<h1>🤖 AI Math Quest (Қазақша)</h1>
-<button class="mute-btn" id="muteBtn">🔊</button>
+<body id="body">
+    <h1>🤖 AI Math Quest (Қазақша) 🧠</h1>
+    <button class="mute-btn" id="muteBtn">🔊</button>
 
-<div id="login" class="card">
-    <label>Атыңызды енгізіңіз:</label><br/>
-    <input id="playerName" placeholder="Ойыншы" /><br/>
-    <button id="startBtn">Бастау</button>
-</div>
-
-<div id="game" class="card" style="display:none">
-    <div>Ойыншы: <b id="playerLabel"></b></div>
-    <div>Деңгей: <b id="levelLabel">1</b> | Ұпай: <b id="scoreLabel">0</b></div>
-    <div id="timer">⏱️ 15 секунд</div>
-    <div style="background:#ddd;padding:3px;border-radius:12px;margin:10px 0">
-        <div id="progress">0%</div>
+    <div id="login" class="card">
+        <h2>Ойынға Кіру</h2>
+        <label for="playerName">Атыңызды енгізіңіз:</label>
+        <input id="playerName" type="text" placeholder="Ойыншы Аты" /><br/>
+        <button id="startBtn">▶️ Ойынды Бастау</button>
     </div>
 
-    <p id="question">Сұрақ...</p>
-    <input id="answerInput" type="number" step="any" placeholder="Жауабыңызды жазыңыз" /><br/>
-    <button id="submitBtn">Жауап беру</button>
-    <button id="hintBtn">Кеңес (-5 ұпай)</button>
+    <div id="game" class="card" style="display:none">
+        <h2>Математикалық Миссия</h2>
+        
+        <div class="stats-grid">
+            <div class="stat-item">Ойыншы: <b id="playerLabel">...</b></div>
+            <div class="stat-item">Деңгей: <b id="levelLabel">1</b></div>
+            <div class="stat-item">Ұпай: <b id="scoreLabel">0</b></div>
+        </div>
 
-    <p id="feedback"></p>
-    <h3>🏆 Көшбасшылар</h3>
-    <ol id="leaders"></ol>
-</div>
+        <div id="timer">⏱️ 15 секунд</div>
+        
+        <div id="progressContainer">
+            <div id="progress">0%</div>
+        </div>
+
+        <p id="question">Сұрақ жүктелуде...</p>
+        
+        <input id="answerInput" type="number" step="any" placeholder="Жауабыңызды енгізіңіз" /><br/>
+        
+        <button id="submitBtn">✅ Жауап беру</button>
+        <button id="hintBtn">💡 Кеңес (-5 ұпай)</button>
+
+        <p id="feedback"></p>
+        
+        <hr/>
+        <h3>🏆 Көшбасшылар Тақтасы</h3>
+        <ol id="leaders"></ol>
+    </div>
 
 <script>
-const API=""; 
-let player=null,currentQuestion=null,hintUsed=false,muted=false;
-let timeLeft=15,timerInterval=null;
+    // Бұрынғыдай JavaScript логикасы мұнда жалғасады...
+    const API = ""; 
+    let player = null, currentQuestion = null, hintUsed = false, muted = false;
+    let timeLeft = 15, timerInterval = null;
 
-// 🎵 Дыбыстар
-const correctSound=new Audio("sounds/correct.mp3");
-const wrongSound=new Audio("sounds/wrong.mp3");
-const comboSound=new Audio("sounds/combo.mp3");
-const bgMusic=new Audio("sounds/bg.mp3");
-bgMusic.loop=true;bgMusic.volume=0.3;
+    // 🎵 Дыбыстар
+    const correctSound = new Audio("sounds/correct.mp3");
+    const wrongSound = new Audio("sounds/wrong.mp3");
+    const comboSound = new Audio("sounds/combo.mp3");
+    const bgMusic = new Audio("sounds/bg.mp3");
+    bgMusic.loop = true; bgMusic.volume = 0.3;
 
-document.getElementById('muteBtn').onclick=()=>{
-    muted=!muted;
-    document.getElementById('muteBtn').innerText=muted?"🔈":"🔊";
-    [correctSound,wrongSound,comboSound,bgMusic].forEach(a=>a.muted=muted);
-};
+    document.getElementById('muteBtn').onclick = () => {
+        muted = !muted;
+        document.getElementById('muteBtn').innerText = muted ? "🔈" : "🔊";
+        [correctSound, wrongSound, comboSound, bgMusic].forEach(a => a.muted = muted);
+    };
 
-const el={
-    login:document.getElementById('login'),
-    playerName:document.getElementById('playerName'),
-    startBtn:document.getElementById('startBtn'),
-    game:document.getElementById('game'),
-    playerLabel:document.getElementById('playerLabel'),
-    question:document.getElementById('question'),
-    answerInput:document.getElementById('answerInput'),
-    submitBtn:document.getElementById('submitBtn'),
-    feedback:document.getElementById('feedback'),
-    scoreLabel:document.getElementById('scoreLabel'),
-    levelLabel:document.getElementById('levelLabel'),
-    progress:document.getElementById('progress'),
-    leaders:document.getElementById('leaders'),
-    hintBtn:document.getElementById('hintBtn'),
-    timer:document.getElementById('timer')
-};
-
-// 🚀 Ойынды бастау
-el.startBtn.onclick=async()=>{
-    player=el.playerName.value.trim()||"Ойыншы";
-    try {
-        const res=await fetch(`${API}/register/${encodeURIComponent(player)}`); 
-        // 🛑 ТҮЗЕТУ: Сәтсіз жауапты тексеру
-        if (!res.ok) throw new Error(`Тіркеу қатесі: ${res.status}`);
-        
-        const data=await res.json();
-        
-        el.playerLabel.innerText=player;
-        el.scoreLabel.innerText=data.current_score||0; 
-        el.levelLabel.innerText=data.current_level||1; 
-
-        el.login.style.display="none";
-        el.game.style.display="block";
-        if(!muted)bgMusic.play().catch(()=>{});
-        getQuestion();
-        updateLeaderboard();
-    } catch (e) {
-        console.error("Тіркелу немесе сұрақ алу сәтсіз аяқталды:", e);
-        alert("Сервермен байланыс қатесі. Консольді тексеріңіз.");
-    }
-};
-
-// 🔢 Сұрақ алу
-async function getQuestion(){
-    clearInterval(timerInterval);
-    timeLeft=15;
-    updateTimer();
-    el.answerInput.disabled = false;
-    el.submitBtn.disabled = false;
-    
-    timerInterval=setInterval(()=>{
-        timeLeft--;
-        updateTimer();
-        if(timeLeft<=0){
-            clearInterval(timerInterval);
-            el.feedback.style.color="red";
-            el.feedback.innerText="⏰ Уақыт бітті!";
-            el.answerInput.disabled = true;
-            el.submitBtn.disabled = true;
-            if(!muted)wrongSound.play();
-            sendAnswer("timeout",true);
-        }
-    },1000);
-
-    try {
-        const res=await fetch(`${API}/question/${encodeURIComponent(player)}`);
-        if (!res.ok) throw new Error(`Сұрақ қатесі: ${res.status}`);
-        
-        const data=await res.json();
-        
-        // 🛑 ТҮЗЕТУ: data.math_question мен data.current_level-дің бар екенін тексеру
-        if (!data.math_question || !data.current_level) {
-            throw new Error("Бэкэндіден деректер толық келмеді.");
-        }
-
-        currentQuestion=data.math_question;
-        el.question.innerText=`(${data.current_level}-деңгей) ${currentQuestion}`;
-
-        el.feedback.innerText="";
-        el.answerInput.value="";
-    } catch (e) {
-        console.error("Сұрақ алу сәтсіз аяқталды:", e);
-        el.question.innerText = "❌ Сұрақ жүктеу қатесі";
-        el.levelLabel.innerText = "N/A";
-        el.scoreLabel.innerText = "N/A";
-    }
-}
-
-// ⏱️ Таймер жаңарту
-function updateTimer(){
-    el.timer.innerText=`⏱️ ${timeLeft} секунд`;
-    if(timeLeft<=5) el.timer.style.color="red";
-    else el.timer.style.color="#ff5722";
-}
-
-// ✅ Жауап беру
-el.submitBtn.onclick=()=>sendAnswer(el.answerInput.value,false);
-
-async function sendAnswer(val,isTimeout){
-    clearInterval(timerInterval);
-    
-    let userAnswerString;
-
-    if (isTimeout) {
-        userAnswerString = "NaN_Timeout"; 
-    } else {
-        const parsedVal = parseFloat(val);
-        if (isNaN(parsedVal)) {
-            alert("Жауапты енгізіңіз!");
-            getQuestion();
-            return;
-        }
-        userAnswerString = parsedVal.toString();
-    }
-    
-    const payload={
-        player: player,
-        question: currentQuestion,
-        user_answer: userAnswerString
+    const el = {
+        body: document.getElementById('body'), // Жаңа: Дене элементі
+        login: document.getElementById('login'),
+        playerName: document.getElementById('playerName'),
+        startBtn: document.getElementById('startBtn'),
+        game: document.getElementById('game'),
+        playerLabel: document.getElementById('playerLabel'),
+        question: document.getElementById('question'),
+        answerInput: document.getElementById('answerInput'),
+        submitBtn: document.getElementById('submitBtn'),
+        feedback: document.getElementById('feedback'),
+        scoreLabel: document.getElementById('scoreLabel'),
+        levelLabel: document.getElementById('levelLabel'),
+        progress: document.getElementById('progress'),
+        leaders: document.getElementById('leaders'),
+        hintBtn: document.getElementById('hintBtn'),
+        timer: document.getElementById('timer')
     };
     
-    try {
-        const res=await fetch(`${API}/answer`,{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify(payload)
-        });
+    // Жаңа функция: Кері байланысқа сәйкес фонды өзгерту
+    function setFeedbackStyle(isCorrect) {
+        el.feedback.style.color = isCorrect ? 'var(--success-color)' : 'var(--danger-color)';
+        el.body.style.backgroundColor = isCorrect ? '#e8f5e9' : '#ffebee'; // Ашық жасыл/қызыл фон
         
-        const data=await res.json();
-        
-        // Бұл жерде data.score, data.new_level болуы міндетті
-        if (data.message && data.message.includes("сан болуы керек")) {
-            el.feedback.style.color="red";
-            el.feedback.innerText= isTimeout ? "⏰ Уақыт бітті! Ұпай шегерілді." : data.message;
-            if(!muted)wrongSound.play();
-        } else if(data.is_correct){
-            el.feedback.style.color="green";
-            el.feedback.innerText="✅ Дұрыс! Жарайсың!";
-            if(!muted)correctSound.play();
-        }else{
-            el.feedback.style.color="red";
-            el.feedback.innerText=`❌ Қате! Дұрыс жауап: ${data.correct_answer}`;
-            if(!muted)wrongSound.play();
+        setTimeout(() => {
+             // 500 мс кейін фонды бастапқы күйіне қайтару
+            el.body.style.backgroundColor = '#e0f7fa'; 
+        }, 500);
+    }
+
+    // 🚀 Ойынды бастау
+    el.startBtn.onclick = async () => {
+        player = el.playerName.value.trim() || "Ойыншы";
+        try {
+            // 🛑 ТҮЗЕТУ: Сәтсіз жауапты тексеру (Бұрынғыдай қалдырылған)
+            const res = await fetch(`${API}/register/${encodeURIComponent(player)}`); 
+            if (!res.ok) throw new Error(`Тіркеу қатесі: ${res.status}`);
+            
+            const data = await res.json();
+            
+            el.playerLabel.innerText = player;
+            el.scoreLabel.innerText = data.current_score || 0; 
+            el.levelLabel.innerText = data.current_level || 1; 
+
+            el.login.style.display = "none";
+            el.game.style.display = "block";
+            if (!muted) bgMusic.play().catch(() => {});
+            getQuestion();
+            updateLeaderboard();
+        } catch (e) {
+            console.error("Тіркелу немесе сұрақ алу сәтсіз аяқталды:", e);
+            alert("Сервермен байланыс қатесі. Консольді тексеріңіз.");
         }
+    };
 
-        // ✅ Деректерді тағайындау
-        el.scoreLabel.innerText=data.score || 0;
-        el.levelLabel.innerText=data.new_level || 1;
-        el.progress.style.width=data.progress || 0+"%";
-        el.progress.innerText=data.progress || 0+"%";
+    // 🔢 Сұрақ алу
+    async function getQuestion() {
+        clearInterval(timerInterval);
+        timeLeft = 15;
+        updateTimer();
+        el.answerInput.disabled = false;
+        el.submitBtn.disabled = false;
+        el.hintBtn.disabled = false;
+        hintUsed = false; // Кеңесті қайта орнату
         
-    } catch (e) {
-        console.error("Жауап жіберу қатесі:", e);
-        el.feedback.innerText = "❌ Сервермен байланыс қатесі!";
-        if(!muted)wrongSound.play();
-    }
-    
-    updateLeaderboard(); 
-    setTimeout(getQuestion, isTimeout ? 2000 : 1500); 
-}
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            updateTimer();
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                el.feedback.innerText = "⏰ Уақыт бітті!";
+                el.answerInput.disabled = true;
+                el.submitBtn.disabled = true;
+                el.hintBtn.disabled = true;
+                if (!muted) wrongSound.play();
+                setFeedbackStyle(false); // Қате стилін қолдану
+                sendAnswer("timeout", true);
+            }
+        }, 1000);
 
-// 💡 Кеңес
-el.hintBtn.onclick=()=>{
-    const score=parseInt(el.scoreLabel.innerText)||0;
-    if(score<5)return alert("Ұпай жеткіліксіз!");
-    if(hintUsed)return alert("Бұрын қолданылды!");
-    hintUsed=true;
-    el.feedback.innerText="💡 Кеңес: амалға мұқият қара!";
-    el.feedback.style.color="blue";
-    el.scoreLabel.innerText=Math.max(score-5,0);
-};
+        try {
+            const res = await fetch(`${API}/question/${encodeURIComponent(player)}`);
+            if (!res.ok) throw new Error(`Сұрақ қатесі: ${res.status}`);
+            
+            const data = await res.json();
+            
+            if (!data.math_question || !data.current_level) {
+                throw new Error("Бэкэндіден деректер толық келмеді.");
+            }
 
-// 🏆 Көшбасшылар
-async function updateLeaderboard(){
-    try {
-        const res=await fetch(`${API}/leaderboard`);
-        if (!res.ok) throw new Error('Көшбасшылар тақтасын жүктеу қатесі');
-        const data=await res.json();
-        el.leaders.innerHTML='';
-        data.slice(0,10).forEach(p=>{
-            const li=document.createElement('li');
-            li.innerText=`${p.player}: ${p.score}`;
-            el.leaders.appendChild(li);
-        });
-    } catch (e) {
-        console.error("Көшбасшылар тақтасын жаңарту қатесі:", e);
+            currentQuestion = data.math_question;
+            el.question.innerText = `(${data.current_level}-деңгей) ${currentQuestion}`;
+
+            el.feedback.innerText = "";
+            el.answerInput.value = "";
+        } catch (e) {
+            console.error("Сұрақ алу сәтсіз аяқталды:", e);
+            el.question.innerText = "❌ Сұрақ жүктеу қатесі";
+            el.levelLabel.innerText = "N/A";
+            el.scoreLabel.innerText = "N/A";
+        }
     }
-}
-setInterval(updateLeaderboard,5000);
+
+    // ⏱️ Таймер жаңарту
+    function updateTimer() {
+        el.timer.innerText = `⏱️ ${timeLeft} секунд`;
+        if (timeLeft <= 5) {
+            el.timer.style.color = 'var(--danger-color)';
+            // 🚨 Динамикалық ескерту
+            el.timer.style.transform = timeLeft % 2 === 0 ? 'scale(1.1)' : 'scale(1)'; 
+        } else {
+            el.timer.style.color = '#ff5722';
+            el.timer.style.transform = 'scale(1)';
+        }
+    }
+
+    // ✅ Жауап беру
+    el.submitBtn.onclick = () => sendAnswer(el.answerInput.value, false);
+
+    async function sendAnswer(val, isTimeout) {
+        clearInterval(timerInterval);
+        el.answerInput.disabled = true;
+        el.submitBtn.disabled = true;
+        el.hintBtn.disabled = true;
+        
+        let userAnswerString;
+
+        if (isTimeout) {
+            userAnswerString = "NaN_Timeout"; 
+        } else {
+            const parsedVal = parseFloat(val);
+            if (isNaN(parsedVal)) {
+                alert("Жауапты енгізіңіз!");
+                getQuestion();
+                return;
+            }
+            userAnswerString = parsedVal.toString();
+        }
+        
+        const payload = {
+            player: player,
+            question: currentQuestion,
+            user_answer: userAnswerString
+        };
+        
+        try {
+            const res = await fetch(`${API}/answer`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const data = await res.json();
+            
+            let isCorrect = false;
+            
+            if (data.message && data.message.includes("сан болуы керек")) {
+                el.feedback.innerText = isTimeout ? "⏰ Уақыт бітті! Ұпай шегерілді." : data.message;
+                if (!muted) wrongSound.play();
+            } else if (data.is_correct) {
+                el.feedback.innerText = "✅ Дұрыс! Жарайсың!";
+                isCorrect = true;
+                if (!muted) correctSound.play();
+            } else {
+                el.feedback.innerText = `❌ Қате! Дұрыс жауап: ${data.correct_answer}`;
+                if (!muted) wrongSound.play();
+            }
+            
+            setFeedbackStyle(isCorrect); // Фонды жаңарту
+
+            el.scoreLabel.innerText = data.score || 0;
+            el.levelLabel.innerText = data.new_level || 1;
+            el.progress.style.width = (data.progress || 0) + "%";
+            el.progress.innerText = (data.progress || 0) + "%";
+            
+        } catch (e) {
+            console.error("Жауап жіберу қатесі:", e);
+            el.feedback.innerText = "❌ Сервермен байланыс қатесі!";
+            setFeedbackStyle(false);
+            if (!muted) wrongSound.play();
+        }
+        
+        updateLeaderboard(); 
+        setTimeout(getQuestion, isTimeout ? 2000 : 1500); 
+    }
+
+    // 💡 Кеңес
+    el.hintBtn.onclick = () => {
+        const score = parseInt(el.scoreLabel.innerText) || 0;
+        if (score < 5) return alert("Ұпай жеткіліксіз! Кеңес үшін кемінде 5 ұпай қажет.");
+        if (hintUsed) return alert("Бұрын қолданылды!");
+        
+        hintUsed = true;
+        el.feedback.innerText = "💡 Кеңес: амалға мұқият қара! Күрделілік деңгейіне назар аудар.";
+        el.feedback.style.color = 'var(--primary-color)';
+        el.scoreLabel.innerText = Math.max(score - 5, 0);
+    };
+
+    // 🏆 Көшбасшылар
+    async function updateLeaderboard() {
+        try {
+            const res = await fetch(`${API}/leaderboard`);
+            if (!res.ok) throw new Error('Көшбасшылар тақтасын жүктеу қатесі');
+            const data = await res.json();
+            el.leaders.innerHTML = '';
+            data.slice(0, 10).forEach((p, index) => {
+                const li = document.createElement('li');
+                let icon = '';
+                if (index === 0) icon = '🥇 ';
+                else if (index === 1) icon = '🥈 ';
+                else if (index === 2) icon = '🥉 ';
+                
+                li.innerHTML = `<span>${icon}${p.player}</span> <b>${p.score} ұпай</b>`;
+                el.leaders.appendChild(li);
+            });
+        } catch (e) {
+            console.error("Көшбасшылар тақтасын жаңарту қатесі:", e);
+        }
+    }
+    setInterval(updateLeaderboard, 5000);
 </script>
 </body>
 </html>
+
