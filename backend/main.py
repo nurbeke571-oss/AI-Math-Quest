@@ -37,6 +37,10 @@ def root():
         return FileResponse(index_path)
     return {"error": "index.html not found"}
 
+# ====================== Static sounds =======================
+sounds_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "sounds"))
+if os.path.exists(sounds_path):
+    app.mount("/sounds", StaticFiles(directory=sounds_path), name="sounds")
 
 
 # ==================== Ойын деректері ======================
@@ -256,3 +260,4 @@ def answer(req: AnswerRequest):
 def leaderboard():
     sorted_players = sorted(players.items(), key=lambda x: x[1]["score"], reverse=True)
     return [{"player": p[0], "score": p[1]["score"]} for p in sorted_players]
+
