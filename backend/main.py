@@ -31,7 +31,10 @@ app.add_middleware(
 # ├── frontend/
 # │   └── index.html
 #
-frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "frontend"))
+# os.path.dirname(__file__) — это текущая папка 'backend'
+# '..' — это команда "подняться на один уровень вверх" (в корень проекта)
+# 'frontend' — это папка, которую мы ищем в корне
+frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
 
 if not os.path.exists(frontend_path):
     # Эта ошибка поможет при отладке на Render, если что-то пойдет не так
@@ -295,4 +298,5 @@ if __name__ == "__main__":
     # Эта команда будет использоваться ТОЛЬКО для локального запуска.
     # На Render будет использоваться Gunicorn (см. настройки).
     uvicorn.run(app, host="0.0.0.0", port=port)
+
 
