@@ -122,7 +122,7 @@ async function getQuestion(){
             el.feedback.style.color="red";
             el.feedback.innerText="⏰ Уақыт бітті!";
             if(!muted)wrongSound.play();
-            sendAnswer(NaN,true); // уақыт біткен
+            sendAnswer(-9999,true); // уақыт біткен
         }
     },1000);
 
@@ -206,5 +206,6 @@ setInterval(updateLeaderboard,5000);
 </script>
 </body>
 </html>
+
 
 
