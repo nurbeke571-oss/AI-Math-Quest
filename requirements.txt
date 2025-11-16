@@ -1,7 +1,11 @@
 fastapi
 uvicorn
+# Веб-сервер (Gunicorn Render-де Uvicorn Worker-ді пайдаланады)
+gunicorn 
+# PostgreSQL және ORM үшін
+psycopg2-binary
+sqlalchemy
+# AI/Математика кітапханалары
 numpy
 scikit-learn
 pydantic
-sqlalchemy
-psycopg2-binary  # PostgreSQL үшін
